@@ -10,7 +10,13 @@ using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
+WindowsPrincipal principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
+bool administrativeMode = principal.IsInRole(WindowsBuiltInRole.Administrator);
 
+//if (!administrativeMode)
+//{
+//    Console.WriteLine("Run As Admin or change permissions on the ");
+//}
 int i = 1;
 try
 {
