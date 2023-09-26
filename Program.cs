@@ -138,11 +138,12 @@ static int DeleteEAC(bool enable)
 
 static async Task<bool> IsEacSettingsModified()
 {
-    var scLivefolder = @"Z:\Games\StarCitizen\LIVE\";
+    var scLivefolder = @"C:\Games\StarCitizen\LIVE";
 
     if (scLivefolder == null || !Directory.Exists(scLivefolder))
-        scLivefolder = await Question("Path to \"StarCitizen\\LIVE\" folder:");
+        scLivefolder = await Question($"Path to StarCitizen\\LIVE  (e.g) \"{scLivefolder}\"");
 
+    scLivefolder = scLivefolder.Trim('"');
     if (string.IsNullOrWhiteSpace(scLivefolder) || !Directory.Exists(scLivefolder))
     {
         throw new Exception("Starcitizen folder is invalid");
@@ -157,25 +158,14 @@ static async Task<bool> IsEacSettingsModified()
 
     return false;
 }
+
 static async Task<int> EditEACSettings(bool enable)
 {
-    var scLivefolder = @"Z:\Games\StarCitizen\LIVE\";
-
-    if(scLivefolder == null || !Directory.Exists(scLivefolder))
-        scLivefolder = await Question("Path to \"StarCitizen\\LIVE\" folder:");
-
-    if (string.IsNullOrWhiteSpace(scLivefolder) || !Directory.Exists(scLivefolder))
-    {
-        throw new Exception("Starcitizen folder is invalid");
-    }
-    var settingsfile = Path.Combine(scLivefolder, "EasyAntiCheat\\Settings.json");
-
-    if (!File.Exists(settingsfile))
-    {
-        throw new Exception("Star citizen folder is invalid, no EasyAntiCheat/Settings.json was inside");
-    }
+    string scLiveFolder = await GetSCFolder();
+    var settingsfile = Path.Combine(scLiveFolder, "EasyAntiCheat\\Settings.json");
     if (enable)
     {
+        
 
         if (!File.Exists(settingsfile + ".bak"))
         {
@@ -218,6 +208,26 @@ static async Task<int> EditEACSettings(bool enable)
     return 1;
 }
 
+static async Task<string> GetSCFolder(string path = @"C:\Games\StarCitizen\LIVE\")
+{
+    var scLiveFolder = path;
+
+    if (!Directory.Exists(scLiveFolder))
+        scLiveFolder = await Question("Path to \"StarCitizen\\LIVE\" folder:");
+
+    if (string.IsNullOrWhiteSpace(scLiveFolder) || !Directory.Exists(scLiveFolder))
+    {
+        throw new Exception("Starcitizen folder is invalid");
+    }
+    var settingsfile = Path.Combine(scLiveFolder, "EasyAntiCheat\\Settings.json");
+
+    if (!File.Exists(settingsfile))
+    {
+        throw new Exception("Star citizen folder is invalid, no EasyAntiCheat/Settings.json was inside");
+    }
+
+    return scLiveFolder;
+}
 static Task<string?> Question(string question)
 {
     Console.WriteLine(question);
