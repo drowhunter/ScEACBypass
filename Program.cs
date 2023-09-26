@@ -7,25 +7,26 @@ using System.Security.Principal;
 using System.Text.RegularExpressions;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-WindowsPrincipal principal = new WindowsPrincipal(WindowsIdentity.GetCurrent());
-bool administrativeMode = principal.IsInRole(WindowsBuiltInRole.Administrator);
 
-//if (!administrativeMode)
-//{
-//    Console.WriteLine("Run As Admin or change permissions on the ");
-//}
 int i = 1;
 try
 {
     bool isModded = await IsAllModded();
 
+    
+
     var title = "EAC for Star Citizen is Enabled: " + isModded;
-    Console.WriteLine(title);
+    echo(title, ConsoleColor.Yellow);
     Console.WriteLine(new string('=',title.Length));
     Console.WriteLine();
+
+
+
     var enable = await Prompt("Eac Bypass?", "Enable", "Disable");
+    Console.Clear();
     
     i += await EditHosts(enable == 0);
     i += DeleteEAC(enable == 0);
@@ -39,9 +40,7 @@ catch (Exception ex)
 {
     var prev = Console.ForegroundColor;
 
-    Console.ForegroundColor = ConsoleColor.Red;
-    Console.WriteLine(ex.ToString());
-    Console.ForegroundColor = prev;
+    echo( ex.ToString(),ConsoleColor.Red);
     
     if (i > 0)
     {
@@ -50,6 +49,8 @@ catch (Exception ex)
     }
     
 }
+
+
 
 static async Task<bool> IsAllModded()
 {
@@ -138,12 +139,8 @@ static int DeleteEAC(bool enable)
 
 static async Task<bool> IsEacSettingsModified()
 {
-    var scLivefolder = @"C:\Games\StarCitizen\LIVE";
+    var scLivefolder = await GetSCFolder();
 
-    if (scLivefolder == null || !Directory.Exists(scLivefolder))
-        scLivefolder = await Question($"Path to StarCitizen\\LIVE  (e.g) \"{scLivefolder}\"");
-
-    scLivefolder = scLivefolder.Trim('"');
     if (string.IsNullOrWhiteSpace(scLivefolder) || !Directory.Exists(scLivefolder))
     {
         throw new Exception("Starcitizen folder is invalid");
@@ -210,10 +207,18 @@ static async Task<int> EditEACSettings(bool enable)
 
 static async Task<string> GetSCFolder(string path = @"C:\Games\StarCitizen\LIVE\")
 {
-    var scLiveFolder = path;
+    var scLiveFolder =  path;
+    var settings = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ScEACBypass.config.json");
+    if (File.Exists(settings))
+    {
+        var settingsObj = JObject.Parse(await File.ReadAllTextAsync(settings));
+        scLiveFolder = settingsObj["gamedir"]?.Value<string>() ?? path;
+    }
+
+    
 
     if (!Directory.Exists(scLiveFolder))
-        scLiveFolder = await Question("Path to \"StarCitizen\\LIVE\" folder:");
+        scLiveFolder = await Question("Path to \"StarCitizen\\LIVE\" folder: (Paste it here and prsss enter.)");
 
     if (string.IsNullOrWhiteSpace(scLiveFolder) || !Directory.Exists(scLiveFolder))
     {
@@ -226,6 +231,7 @@ static async Task<string> GetSCFolder(string path = @"C:\Games\StarCitizen\LIVE\
         throw new Exception("Star citizen folder is invalid, no EasyAntiCheat/Settings.json was inside");
     }
 
+    File.WriteAllText(settings,JsonConvert.SerializeObject(new{ gamedir = scLiveFolder}));
     return scLiveFolder;
 }
 static Task<string?> Question(string question)
@@ -265,11 +271,19 @@ static async Task<int> Prompt(string question, params string[] choices)
         }
         else
         {
-            Console.WriteLine("Invalid Choice");
+            echo("Invalid Choice", ConsoleColor.Cyan);
             goto tryagain;
         }
         return -1;
     });
 
     return answer;
+}
+
+static void echo(string text, ConsoleColor? color = null)
+{
+    var prev = Console.ForegroundColor;
+    Console.ForegroundColor = color ?? prev;
+    Console.WriteLine(text);
+    Console.ForegroundColor = prev;
 }
